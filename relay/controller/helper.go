@@ -193,9 +193,13 @@ func postConsumeQuota(ctx context.Context, usage *relaymodel.Usage, meta *meta.M
 
 	//炳改
 	//炳改：把请求的最后（最新的）消息内容加到logContent中
-	lastMessage := textRequest.Messages[len(textRequest.Messages)-1].StringContent()
+	var lastMessage string
+	lastMessage = ""
+	if len(textRequest.Messages) >= 1 {
+		lastMessage = textRequest.Messages[len(textRequest.Messages)-1].StringContent()
+	}
 	//炳改
-	logContent := fmt.Sprintf("模型倍率 %.2f，分组倍率 %.2f，补全倍率 %.2f", modelRatio, groupRatio, completionRatio) + lastMessage
+	logContent := fmt.Sprintf("模型倍率 %.2f，分组倍率 %.2f，补全倍率 %.2f \n %s", modelRatio, groupRatio, completionRatio, lastMessage)
 
 	model.RecordConsumeLog(ctx, meta.UserId, meta.ChannelId, promptTokens, completionTokens, textRequest.Model, meta.TokenName, quota, logContent)
 	model.UpdateUserUsedQuotaAndRequestCount(meta.UserId, quota)
