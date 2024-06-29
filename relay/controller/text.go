@@ -4,6 +4,9 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 	"github.com/songquanpeng/one-api/common/logger"
 	"github.com/songquanpeng/one-api/relay"
@@ -14,8 +17,6 @@ import (
 	"github.com/songquanpeng/one-api/relay/channeltype"
 	"github.com/songquanpeng/one-api/relay/meta"
 	"github.com/songquanpeng/one-api/relay/model"
-	"io"
-	"net/http"
 )
 
 func RelayTextHelper(c *gin.Context) *model.ErrorWithStatusCode {
@@ -82,6 +83,10 @@ func RelayTextHelper(c *gin.Context) *model.ErrorWithStatusCode {
 
 	// do request
 	resp, err := adaptor.DoRequest(c, meta, requestBody)
+
+	//炳：请求与回复都在上一句中
+	//暂不动此，如只改helper.go就足够了的话。
+
 	if err != nil {
 		logger.Errorf(ctx, "DoRequest failed: %s", err.Error())
 		return openai.ErrorWrapper(err, "do_request_failed", http.StatusInternalServerError)
@@ -100,5 +105,9 @@ func RelayTextHelper(c *gin.Context) *model.ErrorWithStatusCode {
 	}
 	// post-consume quota
 	go postConsumeQuota(ctx, usage, meta, textRequest, ratio, preConsumedQuota, modelRatio, groupRatio)
+
+	//炳：如要动，可把上一句增加一个参数，放入 （请求与）回复 的消息内容
+	//暂不动此，如只改helper.go就足够了的话。
+
 	return nil
 }
