@@ -278,7 +278,7 @@ const LogsTable = () => {
                 if (log.deleted) return <></>;
                 return (
 
-                  //炳： 修改表格渲染逻辑
+                  //炳：修改表格渲染逻辑
                   <Table.Row key={log.id}>
                     {!showOnlyDetails ? (
                       <>
