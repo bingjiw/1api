@@ -49,6 +49,11 @@ const LogsTable = () => {
   const [searchKeyword, setSearchKeyword] = useState('');
   const [searching, setSearching] = useState(false);
   const [logType, setLogType] = useState(0);
+  
+  //炳：修改代码来实现两种视图：仅显示详情列，或仅显示其他列（不包括详情列）。
+  //炳：首先，修改状态变量名称以更好地反映其功能
+  const [showOnlyDetails, setShowOnlyDetails] = useState(false);
+
   const isAdminUser = isAdmin();
   let now = new Date();
   const [inputs, setInputs] = useState({
@@ -233,104 +238,34 @@ const LogsTable = () => {
             </>
           }
         </Form>
+
+        {/* //炳：添加一个切换按钮 */}
+        <Button onClick={() => setShowOnlyDetails(!showOnlyDetails)}>
+          {showOnlyDetails ? '显示其他列' : '仅显示详情'}
+        </Button>
+
         <Table basic compact size='small'>
           <Table.Header>
+
+            {/* //炳： 修改表格渲染逻辑 */}
             <Table.Row>
-              <Table.HeaderCell
-                style={{ cursor: 'pointer' }}
-                onClick={() => {
-                  sortLog('created_time');
-                }}
-                width={3}
-              >
-                时间
-              </Table.HeaderCell>
-              {
-                isAdminUser && <Table.HeaderCell
-                  style={{ cursor: 'pointer' }}
-                  onClick={() => {
-                    sortLog('channel');
-                  }}
-                  width={1}
-                >
-                  渠道
-                </Table.HeaderCell>
-              }
-              {
-                isAdminUser && <Table.HeaderCell
-                  style={{ cursor: 'pointer' }}
-                  onClick={() => {
-                    sortLog('username');
-                  }}
-                  width={1}
-                >
-                  用户
-                </Table.HeaderCell>
-              }
-              <Table.HeaderCell
-                style={{ cursor: 'pointer' }}
-                onClick={() => {
-                  sortLog('token_name');
-                }}
-                width={1}
-              >
-                令牌
-              </Table.HeaderCell>
-              <Table.HeaderCell
-                style={{ cursor: 'pointer' }}
-                onClick={() => {
-                  sortLog('type');
-                }}
-                width={1}
-              >
-                类型
-              </Table.HeaderCell>
-              <Table.HeaderCell
-                style={{ cursor: 'pointer' }}
-                onClick={() => {
-                  sortLog('model_name');
-                }}
-                width={2}
-              >
-                模型
-              </Table.HeaderCell>
-              <Table.HeaderCell
-                style={{ cursor: 'pointer' }}
-                onClick={() => {
-                  sortLog('prompt_tokens');
-                }}
-                width={1}
-              >
-                提示
-              </Table.HeaderCell>
-              <Table.HeaderCell
-                style={{ cursor: 'pointer' }}
-                onClick={() => {
-                  sortLog('completion_tokens');
-                }}
-                width={1}
-              >
-                补全
-              </Table.HeaderCell>
-              <Table.HeaderCell
-                style={{ cursor: 'pointer' }}
-                onClick={() => {
-                  sortLog('quota');
-                }}
-                width={1}
-              >
-                额度
-              </Table.HeaderCell>
-              <Table.HeaderCell
-                style={{ cursor: 'pointer' }}
-                onClick={() => {
-                  sortLog('content');
-                }}
-                width={isAdminUser ? 4 : 6}
-              >
-                详情
-              </Table.HeaderCell>
-            </Table.Row>
+                {!showOnlyDetails ? (
+                  <>
+                    <Table.HeaderCell style={{ cursor: 'pointer' }} onClick={() => { sortLog('created_time'); }} width={3}>时间</Table.HeaderCell>
+                    {isAdminUser && <Table.HeaderCell style={{ cursor: 'pointer' }} onClick={() => { sortLog('channel'); }} width={1}>渠道</Table.HeaderCell>}
+                    {isAdminUser && <Table.HeaderCell style={{ cursor: 'pointer' }} onClick={() => { sortLog('username'); }} width={1}>用户</Table.HeaderCell>}
+                    <Table.HeaderCell style={{ cursor: 'pointer' }} onClick={() => { sortLog('token_name'); }} width={1}>令牌</Table.HeaderCell>
+                    <Table.HeaderCell style={{ cursor: 'pointer' }} onClick={() => { sortLog('type'); }} width={1}>类型</Table.HeaderCell>
+                    <Table.HeaderCell style={{ cursor: 'pointer' }} onClick={() => { sortLog('model_name'); }} width={2}>模型</Table.HeaderCell>
+                    <Table.HeaderCell style={{ cursor: 'pointer' }} onClick={() => { sortLog('prompt_tokens'); }} width={1}>提示</Table.HeaderCell>
+                    <Table.HeaderCell style={{ cursor: 'pointer' }} onClick={() => { sortLog('completion_tokens'); }} width={1}>补全</Table.HeaderCell>
+                    <Table.HeaderCell style={{ cursor: 'pointer' }} onClick={() => { sortLog('quota'); }} width={1}>额度</Table.HeaderCell>
+                  </>
+                ) : (
+                  <Table.HeaderCell style={{ cursor: 'pointer' }} onClick={() => { sortLog('content'); }} width={16}>详情</Table.HeaderCell>
+                )}
+              </Table.Row>
+
           </Table.Header>
 
           <Table.Body>
@@ -342,26 +277,26 @@ const LogsTable = () => {
               .map((log, idx) => {
                 if (log.deleted) return <></>;
                 return (
+
+                  //炳： 修改表格渲染逻辑
                   <Table.Row key={log.id}>
-                    <Table.Cell>{renderTimestamp(log.created_at)}</Table.Cell>
-                    {
-                      isAdminUser && (
-                        <Table.Cell>{log.channel ? <Label basic>{log.channel}</Label> : ''}</Table.Cell>
-                      )
-                    }
-                    {
-                      isAdminUser && (
-                        <Table.Cell>{log.username ? <Label>{log.username}</Label> : ''}</Table.Cell>
-                      )
-                    }
-                    <Table.Cell>{log.token_name ? <Label basic>{log.token_name}</Label> : ''}</Table.Cell>
-                    <Table.Cell>{renderType(log.type)}</Table.Cell>
-                    <Table.Cell>{log.model_name ? <Label basic>{log.model_name}</Label> : ''}</Table.Cell>
-                    <Table.Cell>{log.prompt_tokens ? log.prompt_tokens : ''}</Table.Cell>
-                    <Table.Cell>{log.completion_tokens ? log.completion_tokens : ''}</Table.Cell>
-                    <Table.Cell>{log.quota ? renderQuota(log.quota, 6) : ''}</Table.Cell>
-                    <Table.Cell>{log.content}</Table.Cell>
+                    {!showOnlyDetails ? (
+                      <>
+                        <Table.Cell>{renderTimestamp(log.created_at)}</Table.Cell>
+                        {isAdminUser && <Table.Cell>{log.channel ? <Label basic>{log.channel}</Label> : ''}</Table.Cell>}
+                        {isAdminUser && <Table.Cell>{log.username ? <Label>{log.username}</Label> : ''}</Table.Cell>}
+                        <Table.Cell>{log.token_name ? <Label basic>{log.token_name}</Label> : ''}</Table.Cell>
+                        <Table.Cell>{renderType(log.type)}</Table.Cell>
+                        <Table.Cell>{log.model_name ? <Label basic>{log.model_name}</Label> : ''}</Table.Cell>
+                        <Table.Cell>{log.prompt_tokens ? log.prompt_tokens : ''}</Table.Cell>
+                        <Table.Cell>{log.completion_tokens ? log.completion_tokens : ''}</Table.Cell>
+                        <Table.Cell>{log.quota ? renderQuota(log.quota, 6) : ''}</Table.Cell>
+                      </>
+                    ) : (
+                      <Table.Cell>{log.content}</Table.Cell>
+                    )}
                   </Table.Row>
+
                 );
               })}
           </Table.Body>
