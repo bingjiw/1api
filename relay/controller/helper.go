@@ -199,6 +199,9 @@ func postConsumeQuota(ctx context.Context, usage *relaymodel.Usage, meta *meta.M
 		lastMessage = fmt.Sprintf("🤖🤖🤖🤖%s　　👦🏻👧🏻👦🏻👧🏻%s",
 			textRequest.Messages[len(textRequest.Messages)-2].StringContent(),
 			textRequest.Messages[len(textRequest.Messages)-1].StringContent())
+	} else if len(textRequest.Messages) == 1 {
+		lastMessage = fmt.Sprintf("👦🏻👧🏻👦🏻👧🏻%s",
+			textRequest.Messages[len(textRequest.Messages)-1].StringContent())
 	}
 	//炳改
 	logContent := fmt.Sprintf("模型倍率 %.2f，分组倍率 %.2f，补全倍率 %.2f　　%s", modelRatio, groupRatio, completionRatio, lastMessage)
