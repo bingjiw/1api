@@ -84,8 +84,8 @@ func RelayTextHelper(c *gin.Context) *model.ErrorWithStatusCode {
 	// do request
 	resp, err := adaptor.DoRequest(c, meta, requestBody)
 
-	//炳：请求与回复都在上一句中
-	//暂不动此，如只改helper.go就足够了的话。
+	//炳：在上一句的resp中只拿到初始的回复，不是完整的所有流式内容
+	//所以不能在这里开刀处理
 
 	if err != nil {
 		logger.Errorf(ctx, "DoRequest failed: %s", err.Error())
@@ -96,8 +96,24 @@ func RelayTextHelper(c *gin.Context) *model.ErrorWithStatusCode {
 		return RelayErrorHandler(resp)
 	}
 
+	/* 	炳：关于流式的回复内容，何时拿到？
+
+	   	等待时间：
+	   	是的，代码会在 DoResponse 这里等待，直到所有的流式内容都被接收和处理完毕。这可能需要10秒或更长时间，取决于服务器响应的完整时间。
+	   	"卡住"的性质：
+	   	虽然 DoResponse 确实在等待所有内容，但它并不是完全"卡住"或阻塞的。
+	   	在等待期间，它会持续处理接收到的数据流，并可能将处理后的数据实时发送给客户端。
+
+	   	异步性：
+	   	尽管 DoResponse 在等待，但它通常不会阻塞整个服务器或其他请求的处理。
+	   	在许多实现中，这个过程可能运行在一个 goroutine 中，允许并发处理其他请求。
+
+	   	返回时机：
+	   	只有当所有流式内容都被接收和处理完毕后，DoResponse 才会返回。 */
+
 	// do response
 	usage, respErr := adaptor.DoResponse(c, resp, meta)
+
 	if respErr != nil {
 		logger.Errorf(ctx, "respErr is not nil: %+v", respErr)
 		billing.ReturnPreConsumedQuota(ctx, preConsumedQuota, meta.TokenId)
@@ -107,7 +123,7 @@ func RelayTextHelper(c *gin.Context) *model.ErrorWithStatusCode {
 	go postConsumeQuota(ctx, usage, meta, textRequest, ratio, preConsumedQuota, modelRatio, groupRatio)
 
 	//炳：如要动，可把上一句增加一个参数，放入 （请求与）回复 的消息内容
-	//暂不动此，如只改helper.go就足够了的话。
+	//要拿到流式的所有回答内容太复杂，暂不动此，如只改helper.go就足够了的话。
 
 	return nil
 }

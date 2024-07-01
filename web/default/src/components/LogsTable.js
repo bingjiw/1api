@@ -249,9 +249,9 @@ const LogsTable = () => {
 
             {/* //炳： 修改表格渲染逻辑 */}
             <Table.Row>
+              <Table.HeaderCell style={{ cursor: 'pointer' }} onClick={() => { sortLog('created_time'); }} width={3}>时间</Table.HeaderCell>
                 {!showOnlyDetails ? (
                   <>
-                    <Table.HeaderCell style={{ cursor: 'pointer' }} onClick={() => { sortLog('created_time'); }} width={3}>时间</Table.HeaderCell>
                     {isAdminUser && <Table.HeaderCell style={{ cursor: 'pointer' }} onClick={() => { sortLog('channel'); }} width={1}>渠道</Table.HeaderCell>}
                     {isAdminUser && <Table.HeaderCell style={{ cursor: 'pointer' }} onClick={() => { sortLog('username'); }} width={1}>用户</Table.HeaderCell>}
                     <Table.HeaderCell style={{ cursor: 'pointer' }} onClick={() => { sortLog('token_name'); }} width={1}>令牌</Table.HeaderCell>
@@ -280,9 +280,9 @@ const LogsTable = () => {
 
                   //炳：修改表格渲染逻辑
                   <Table.Row key={log.id}>
+                    <Table.Cell>{renderTimestamp(log.created_at)}</Table.Cell>
                     {!showOnlyDetails ? (
                       <>
-                        <Table.Cell>{renderTimestamp(log.created_at)}</Table.Cell>
                         {isAdminUser && <Table.Cell>{log.channel ? <Label basic>{log.channel}</Label> : ''}</Table.Cell>}
                         {isAdminUser && <Table.Cell>{log.username ? <Label>{log.username}</Label> : ''}</Table.Cell>}
                         <Table.Cell>{log.token_name ? <Label basic>{log.token_name}</Label> : ''}</Table.Cell>
