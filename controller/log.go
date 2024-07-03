@@ -1,12 +1,17 @@
 package controller
 
 import (
+	"net/http"
+	"strconv"
+
 	"github.com/gin-gonic/gin"
 	"github.com/songquanpeng/one-api/common/config"
 	"github.com/songquanpeng/one-api/common/ctxkey"
 	"github.com/songquanpeng/one-api/model"
-	"net/http"
-	"strconv"
+
+	//炳：后端 API 中实现 Markdown 到 HTML 的转换
+	//炳：把markdown转换为HTML的函数在load 数据的API来处理
+	"github.com/gomarkdown/markdown"
 )
 
 func GetAllLogs(c *gin.Context) {
@@ -29,6 +34,12 @@ func GetAllLogs(c *gin.Context) {
 		})
 		return
 	}
+
+	//炳： 转换日志内容从 Markdown 到 HTML
+	for i := range logs {
+		logs[i].Content = string(markdown.ToHTML([]byte(logs[i].Content), nil, nil))
+	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",
