@@ -204,7 +204,7 @@ const LogsTable = () => {
   /* 炳： 
   
   问题：后端取数据时所markdown转成了HTML，但前端又“安全”的把所有HTML标签转义了，所以前端会如下呈现
-  <p>模型倍率 1.43，分组倍率 1.00，补全倍率 1.00　　🤖🤖🤖🤖<img src=
+       <p>模型倍率 1.43，分组倍率 1.00，补全倍率 1.00　　🤖🤖🤖🤖<img src=
   为避免前端对HTML标签的转义，要用 dangerouslySetInnerHTML 方法
 
   既然后端 API 已经将 Markdown 转换为 HTML，我们就可以直接在 React 组件中渲染这个 HTML 内容。
