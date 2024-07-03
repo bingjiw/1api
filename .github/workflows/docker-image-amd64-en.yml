@@ -1,9 +1,6 @@
 name: Publish Docker image (amd64, English)
 
 on:
-  push:
-    tags:
-      - 'v*.*.*'
   workflow_dispatch:
     inputs:
       name:
