@@ -200,6 +200,22 @@ const LogsTable = () => {
     setLoading(false);
   };
 
+  
+  /* 炳： 
+  
+  问题：后端取数据时所markdown转成了HTML，但前端又“安全”的把所有HTML标签转义了，所以前端会如下呈现
+  <p>模型倍率 1.43，分组倍率 1.00，补全倍率 1.00　　🤖🤖🤖🤖<img src=
+  为避免前端对HTML标签的转义，要用 dangerouslySetInnerHTML 方法
+
+  既然后端 API 已经将 Markdown 转换为 HTML，我们就可以直接在 React 组件中渲染这个 HTML 内容。
+  我会分别介绍使用 dangerouslySetInnerHTML 方法。
+  使用 dangerouslySetInnerHTML：
+  这是 React 内置的方法，但使用时需要小心，因为它可能导致 XSS 攻击如果 HTML 内容不可信。 */  
+  const renderContent = (content) => {
+    return <div dangerouslySetInnerHTML={{ __html: content }} />;
+  };
+
+
   return (
     <>
       <Segment>
@@ -280,7 +296,10 @@ const LogsTable = () => {
 
                   //炳：修改表格渲染逻辑
                   <Table.Row key={log.id}>
+                    
+                    {/* //炳：时间栏位 总是显示，无论 显问答详情 还是 其他列 */}
                     <Table.Cell>{renderTimestamp(log.created_at)}</Table.Cell>
+
                     {!showOnlyDetails ? (
                       <>
                         {isAdminUser && <Table.Cell>{log.channel ? <Label basic>{log.channel}</Label> : ''}</Table.Cell>}
@@ -293,7 +312,8 @@ const LogsTable = () => {
                         <Table.Cell>{log.quota ? renderQuota(log.quota, 6) : ''}</Table.Cell>
                       </>
                     ) : (
-                      <Table.Cell>{log.content}</Table.Cell>
+                      // 炳：为避免前端对HTML标签的转义
+                      <Table.Cell>{renderContent(log.content)}</Table.Cell>
                     )}
                   </Table.Row>
 
