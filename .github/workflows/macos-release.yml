@@ -3,10 +3,6 @@ permissions:
   contents: write
 
 on:
-  push:
-    tags:
-      - 'v*.*.*'
-      - '!*-alpha*'
   workflow_dispatch:
     inputs:
       name:
