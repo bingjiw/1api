@@ -229,19 +229,27 @@ func BJ_postConsumeQuota_withResponseText(strResponseText string, ctx context.Co
 
 	//炳改
 	//炳改：把请求的最后（最新的）消息内容加到logContent中
-	var lastMessage string
-	lastMessage = ""
-	if len(textRequest.Messages) >= 2 {
-		lastMessage = fmt.Sprintf("🤖🤖🤖🤖%s　　👦🏻👧🏻👦🏻👧🏻%s",
-			textRequest.Messages[len(textRequest.Messages)-2].StringContent(),
-			textRequest.Messages[len(textRequest.Messages)-1].StringContent())
-	} else if len(textRequest.Messages) == 1 {
-		lastMessage = fmt.Sprintf("👦🏻👧🏻👦🏻👧🏻%s",
-			textRequest.Messages[len(textRequest.Messages)-1].StringContent())
+	//strMessagesAboveAnswer是LLM回答之前（之上）的消息（可能是 系统提示词 与 用户的提问）
+	// 初始化 strMessagesAboveAnswer 为空字符串
+	strMessagesAboveAnswer := ""
+
+	// 根据 textRequest.Messages 的长度设置 strMessagesAboveAnswer 的值
+	switch len(textRequest.Messages) {
+	case 0:
+		// 没有消息的情况下，不做任何处理，strMessagesAboveAnswer 保持为空字符串
+	case 1:
+		strMessagesAboveAnswer = fmt.Sprintf("\n👦🏻👧🏻👦🏻👧🏻%s", textRequest.Messages[0].StringContent())
+	default: // 处理 case 2 和大于 2 的情况
+		lastOne := len(textRequest.Messages) - 1 //最后一条消息的index
+		lastTwo := len(textRequest.Messages) - 2 //最后第2条消息的index
+		strMessagesAboveAnswer = fmt.Sprintf("\n⛄️⛄️⛄️⛄️%s\n👦🏻👧🏻👦🏻👧🏻%s",
+			textRequest.Messages[lastTwo].StringContent(),
+			textRequest.Messages[lastOne].StringContent())
 	}
-	lastMessage = lastMessage + "🤖🤖🤖▶︎ " + strResponseText
-	//炳改
-	logContent := fmt.Sprintf("模型倍率 %.2f，分组倍率 %.2f，补全倍率 %.2f　　%s", modelRatio, groupRatio, completionRatio, lastMessage)
+
+	// 构建 logContent 字符串
+	logContent := fmt.Sprintf("模型倍率 %.2f，分组倍率 %.2f，补全倍率 %.2f\n%s\n🤖🤖🤖🤖%s",
+		modelRatio, groupRatio, completionRatio, strMessagesAboveAnswer, strResponseText)
 
 	model.RecordConsumeLog(ctx, meta.UserId, meta.ChannelId, promptTokens, completionTokens, textRequest.Model, meta.TokenName, quota, logContent)
 	model.UpdateUserUsedQuotaAndRequestCount(meta.UserId, quota)

@@ -17,6 +17,9 @@ import (
 	"github.com/songquanpeng/one-api/relay/channeltype"
 	"github.com/songquanpeng/one-api/relay/meta"
 	"github.com/songquanpeng/one-api/relay/model"
+
+	"regexp"  //炳加 需要把流式的一个个输出的字词全合并起来，要用到正则表达式
+	"strings" //炳加
 )
 
 func RelayTextHelper(c *gin.Context) *model.ErrorWithStatusCode {
@@ -135,11 +138,35 @@ func RelayTextHelper(c *gin.Context) *model.ErrorWithStatusCode {
 		return openai.ErrorWrapper(readErr, "failed_to_read_response_body", http.StatusInternalServerError)
 	}
 
-	// 将主体内容转换为字符串
-	strResponseText := string(responseBytes)
+	//现在上面拿到的 responseBytes 内容是如下这样子的 流式输出的chunks：
+	// id:1 event:result :HTTP_STATUS/200 data:{“output”:{“choices”:[{“message”:{“content”:“第一次”,“role”:“assistant”},“finish_reason”:“null”}]},“usage”:{“total_tokens”:224,“input_tokens”:223,“output_tokens”:1},“request_id”:“17fbc625-2502-989c-adbf-fb704b65f83a”}
+	// id:2 event:result :HTTP_STATUS/200 data:{“output”:{“choices”:[{“message”:{“content”:“世界”,“role”:“assistant”},“finish_reason”:“null”}]},“usage”:{“total_tokens”:225,“input_tokens”:223,“output_tokens”:2},“request_id”:“17fbc625-2502-989c-adbf-fb704b65f83a”}
+	// id:3 event:result :HTTP_STATUS/200 data:{“output”:{“choices”:[{“message”:{“content”:“大战”,“role”:“assistant”},“finish_reason”:“null”}]},“usage”:{“total_tokens”:226,“input_tokens”:223,“output_tokens”:3},“request_id”:“17fbc625-2502-989c-adbf-fb704b65f83a”}
+	// ... ...
+	// 所以需要把这些流式的一个个输出的字词全合并起来，如下用正则表达式来合并。
+	// 提取并合并所有 content 字段的文本
+	// 使用正则表达式提取所有的 content 字段的文本
+	re := regexp.MustCompile(`"message":\{"content":"(.*?)","role":"assistant"\}`)
+	matches := re.FindAllStringSubmatch(string(responseBytes), -1)
+	//
+	// 将所有提取的 content 文本直接追加到一个字符串切片中
+	var contents []string
+	for _, match := range matches {
+		if len(match) > 1 {
+			contents = append(contents, match[1])
+		}
+	}
+	strFullContent := strings.Join(contents, "")
 
 	// 重新将主体内容放回 resp.Body 中，以便不影响其他代码可能的后续操作
 	resp.Body = io.NopCloser(bytes.NewBuffer(responseBytes))
+
+	//其实DoResponse中就是下面这段，已经拿到responseText了，
+	//但是无法在不改interface及许多implementation的情况下把值从DoResponse中传出来
+	// if meta.IsStream {
+	// 	var responseText string
+	// 	err, responseText, usage = StreamHandler(c, resp, meta.Mode)
+	// }
 
 	//原有代码 do response
 	usage, respErr := adaptor.DoResponse(c, resp, meta)
@@ -151,7 +178,7 @@ func RelayTextHelper(c *gin.Context) *model.ErrorWithStatusCode {
 	}
 
 	// 异步调用 postConsumeQuota
-	go BJ_postConsumeQuota_withResponseText(strResponseText, c.Request.Context(), usage, meta, textRequest, ratio, preConsumedQuota, modelRatio, groupRatio)
+	go BJ_postConsumeQuota_withResponseText(strFullContent, c.Request.Context(), usage, meta, textRequest, ratio, preConsumedQuota, modelRatio, groupRatio)
 
 	return nil
 }
