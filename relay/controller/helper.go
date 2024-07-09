@@ -238,17 +238,17 @@ func BJ_postConsumeQuota_withResponseText(strResponseText string, ctx context.Co
 	case 0:
 		// 没有消息的情况下，不做任何处理，strMessagesAboveAnswer 保持为空字符串
 	case 1:
-		strMessagesAboveAnswer = fmt.Sprintf("\n👦🏻👧🏻👦🏻👧🏻%s", textRequest.Messages[0].StringContent())
+		strMessagesAboveAnswer = fmt.Sprintf("👦🏻👧🏻👦🏻👧🏻%s", textRequest.Messages[0].StringContent())
 	default: // 处理 case 2 和大于 2 的情况
 		lastOne := len(textRequest.Messages) - 1 //最后一条消息的index
 		lastTwo := len(textRequest.Messages) - 2 //最后第2条消息的index
-		strMessagesAboveAnswer = fmt.Sprintf("\n⛄️⛄️⛄️⛄️%s\n👦🏻👧🏻👦🏻👧🏻%s",
+		strMessagesAboveAnswer = fmt.Sprintf("⛄️⛄️⛄️⛄️%s  \n\n👦🏻👧🏻👦🏻👧🏻%s",
 			textRequest.Messages[lastTwo].StringContent(),
 			textRequest.Messages[lastOne].StringContent())
 	}
 
 	// 构建 logContent 字符串
-	logContent := fmt.Sprintf("模型倍率 %.2f，分组倍率 %.2f，补全倍率 %.2f\n%s\n🤖🤖🤖🤖%s",
+	logContent := fmt.Sprintf("模型倍率 %.2f，分组倍率 %.2f，补全倍率 %.2f  \n\n%s  \n\n🤖🤖🤖🤖%s",
 		modelRatio, groupRatio, completionRatio, strMessagesAboveAnswer, strResponseText)
 
 	model.RecordConsumeLog(ctx, meta.UserId, meta.ChannelId, promptTokens, completionTokens, textRequest.Model, meta.TokenName, quota, logContent)
