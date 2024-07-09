@@ -111,6 +111,36 @@ func RelayTextHelper(c *gin.Context) *model.ErrorWithStatusCode {
 	   	返回时机：
 	   	只有当所有流式内容都被接收和处理完毕后，DoResponse 才会返回。 */
 
+	// post-consume quota
+	//炳，原句：go postConsumeQuota(ctx, usage, meta, textRequest, ratio, preConsumedQuota, modelRatio, groupRatio)
+	//改为如下：
+	//responseBytes, anError := io.ReadAll(resp.Body)
+	//strResponseText = string(responseBytes)
+	//go BJ_postConsumeQuota_withResponseText(strResponseText, ctx, usage, meta, textRequest, ratio, preConsumedQuota, modelRatio, groupRatio)
+	//为了使以上代码更健壮并减少潜在的错误，我们可以添加更多的错误处理和资源管理措施。下面是改进后的代码：
+	//
+	// 确保在函数结束时关闭响应主体
+	defer func() {
+		if cerr := resp.Body.Close(); cerr != nil {
+			// 记录关闭错误，但不覆盖主要错误
+			logger.Errorf(ctx, "failed to close response body: %v", cerr)
+		}
+	}()
+
+	// 读取回复的主体内容
+	responseBytes, readErr := io.ReadAll(resp.Body)
+	if readErr != nil {
+		// 处理读取错误
+		logger.Errorf(ctx, "failed to read response body: %v", readErr)
+		return openai.ErrorWrapper(readErr, "failed_to_read_response_body", http.StatusInternalServerError)
+	}
+
+	// 将主体内容转换为字符串
+	strResponseText := string(responseBytes)
+
+	// 重新将主体内容放回 resp.Body 中，以便不影响其他代码可能的后续操作
+	resp.Body = io.NopCloser(bytes.NewBuffer(responseBytes))
+
 	// do response
 	usage, respErr := adaptor.DoResponse(c, resp, meta)
 
@@ -119,11 +149,9 @@ func RelayTextHelper(c *gin.Context) *model.ErrorWithStatusCode {
 		billing.ReturnPreConsumedQuota(ctx, preConsumedQuota, meta.TokenId)
 		return respErr
 	}
-	// post-consume quota
-	go postConsumeQuota(ctx, usage, meta, textRequest, ratio, preConsumedQuota, modelRatio, groupRatio)
 
-	//炳：如要动，可把上一句增加一个参数，放入 （请求与）回复 的消息内容
-	//要拿到流式的所有回答内容太复杂，暂不动此，如只改helper.go就足够了的话。
+	// 异步调用 postConsumeQuota
+	go BJ_postConsumeQuota_withResponseText(strResponseText, c.Request.Context(), usage, meta, textRequest, ratio, preConsumedQuota, modelRatio, groupRatio)
 
 	return nil
 }

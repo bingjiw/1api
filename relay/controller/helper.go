@@ -190,6 +190,42 @@ func postConsumeQuota(ctx context.Context, usage *relaymodel.Usage, meta *meta.M
 	if err != nil {
 		logger.Error(ctx, "error update user quota cache: "+err.Error())
 	}
+	//炳改后，又恢复原样了：
+	logContent := fmt.Sprintf("模型倍率 %.2f，分组倍率 %.2f，补全倍率 %.2f", modelRatio, groupRatio, completionRatio)
+
+	model.RecordConsumeLog(ctx, meta.UserId, meta.ChannelId, promptTokens, completionTokens, textRequest.Model, meta.TokenName, quota, logContent)
+	model.UpdateUserUsedQuotaAndRequestCount(meta.UserId, quota)
+	model.UpdateChannelUsedQuota(meta.ChannelId, quota)
+}
+
+func BJ_postConsumeQuota_withResponseText(strResponseText string, ctx context.Context, usage *relaymodel.Usage, meta *meta.Meta, textRequest *relaymodel.GeneralOpenAIRequest, ratio float64, preConsumedQuota int64, modelRatio float64, groupRatio float64) {
+	if usage == nil {
+		logger.Error(ctx, "usage is nil, which is unexpected")
+		return
+	}
+	var quota int64
+	completionRatio := billingratio.GetCompletionRatio(textRequest.Model)
+	promptTokens := usage.PromptTokens
+	completionTokens := usage.CompletionTokens
+	quota = int64(math.Ceil((float64(promptTokens) + float64(completionTokens)*completionRatio) * ratio))
+	if ratio != 0 && quota <= 0 {
+		quota = 1
+	}
+	totalTokens := promptTokens + completionTokens
+	if totalTokens == 0 {
+		// in this case, must be some error happened
+		// we cannot just return, because we may have to return the pre-consumed quota
+		quota = 0
+	}
+	quotaDelta := quota - preConsumedQuota
+	err := model.PostConsumeTokenQuota(meta.TokenId, quotaDelta)
+	if err != nil {
+		logger.Error(ctx, "error consuming token remain quota: "+err.Error())
+	}
+	err = model.CacheUpdateUserQuota(ctx, meta.UserId)
+	if err != nil {
+		logger.Error(ctx, "error update user quota cache: "+err.Error())
+	}
 
 	//炳改
 	//炳改：把请求的最后（最新的）消息内容加到logContent中
@@ -203,6 +239,7 @@ func postConsumeQuota(ctx context.Context, usage *relaymodel.Usage, meta *meta.M
 		lastMessage = fmt.Sprintf("👦🏻👧🏻👦🏻👧🏻%s",
 			textRequest.Messages[len(textRequest.Messages)-1].StringContent())
 	}
+	lastMessage = lastMessage + "🤖🤖🤖▶︎ " + strResponseText
 	//炳改
 	logContent := fmt.Sprintf("模型倍率 %.2f，分组倍率 %.2f，补全倍率 %.2f　　%s", modelRatio, groupRatio, completionRatio, lastMessage)
 

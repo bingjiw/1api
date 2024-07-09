@@ -35,7 +35,9 @@ func GetAllLogs(c *gin.Context) {
 		return
 	}
 
-	//炳： 转换日志内容从 Markdown 到 HTML
+	//《《《《《《《《《《《炳： 转换日志内容从 Markdown 到 HTML
+	//《《《《《《《《《《《炳： 转换日志内容从 Markdown 到 HTML
+	//《《《《《《《《《《《炳： 转换日志内容从 Markdown 到 HTML
 	for i := range logs {
 		logs[i].Content = string(markdown.ToHTML([]byte(logs[i].Content), nil, nil))
 	}
