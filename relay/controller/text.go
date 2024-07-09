@@ -141,9 +141,9 @@ func RelayTextHelper(c *gin.Context) *model.ErrorWithStatusCode {
 	// 重新将主体内容放回 resp.Body 中，以便不影响其他代码可能的后续操作
 	resp.Body = io.NopCloser(bytes.NewBuffer(responseBytes))
 
-	// do response
+	//原有代码 do response
 	usage, respErr := adaptor.DoResponse(c, resp, meta)
-
+	//原有代码
 	if respErr != nil {
 		logger.Errorf(ctx, "respErr is not nil: %+v", respErr)
 		billing.ReturnPreConsumedQuota(ctx, preConsumedQuota, meta.TokenId)
