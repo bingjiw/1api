@@ -84,6 +84,25 @@ function App() {
         linkElement.href = logo;
       }
     }
+
+    // 添加MathJax脚本
+    const script = document.createElement('script');
+    script.type = 'text/javascript';
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML';
+    script.async = true;
+    document.head.appendChild(script);
+
+    // 当MathJax脚本加载完成后，重新渲染公式
+    script.onload = () => {
+      if (window.MathJax) {
+        window.MathJax.Hub.Queue(["Typeset", window.MathJax.Hub]);
+      }
+    };
+
+    // 清理脚本以防止内存泄漏
+    return () => {
+      document.head.removeChild(script);
+    };
   }, []);
 
   return (

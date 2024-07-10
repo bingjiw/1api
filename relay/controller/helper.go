@@ -247,6 +247,10 @@ func BJ_postConsumeQuota_withResponseText(strResponseText string, ctx context.Co
 			textRequest.Messages[lastOne].StringContent())
 	}
 
+	// 将 \n\n 和 \n 替换为真正的回车换行符
+	strResponseText = strings.ReplaceAll(strResponseText, "\\n\\n", "\n\n")
+	strResponseText = strings.ReplaceAll(strResponseText, "\\n", "\n")
+
 	// 构建 logContent 字符串
 	logContent := fmt.Sprintf("模型倍率 %.2f，分组倍率 %.2f，补全倍率 %.2f  \n\n%s  \n\n🤖🤖🤖🤖%s",
 		modelRatio, groupRatio, completionRatio, strMessagesAboveAnswer, strResponseText)
