@@ -178,41 +178,100 @@ func RelayTextHelper(c *gin.Context) *model.ErrorWithStatusCode {
 	// 炳：以上注释掉的代码 会导致 DoResponse 拿不到内容，破坏了原来的代码功能
 
 	// In your main function:
-	var fullResponseBuffer bytes.Buffer
-	tee := &teeReader{reader: resp.Body, buffer: &fullResponseBuffer}
-	resp.Body = io.NopCloser(tee)
+	var strFullContent string
+	var usage *model.Usage
+	if meta.IsStream {
+		// 流式 流式 流式 流式 流式 流式 流式 流式 流式 流式 流式
+		// 使用现有的 teeReader 方法
+		var fullResponseBuffer bytes.Buffer
+		tee := &teeReader{reader: resp.Body, buffer: &fullResponseBuffer}
+		resp.Body = io.NopCloser(tee)
 
-	//原有代码 do response
-	usage, respErr := adaptor.DoResponse(c, resp, meta)
-	//原有代码 after doResponse
-	if respErr != nil {
-		logger.Errorf(ctx, "respErr is not nil: %+v", respErr)
-		billing.ReturnPreConsumedQuota(ctx, preConsumedQuota, meta.TokenId)
-		return respErr
-	}
-
-	//现在上面拿到的 fullResponseBuffer 内容是如下这样子的 流式输出的chunks：
-	// id:1 event:result :HTTP_STATUS/200 data:{“output”:{“choices”:[{“message”:{“content”:“第一次”,“role”:“assistant”},“finish_reason”:“null”}]},“usage”:{“total_tokens”:224,“input_tokens”:223,“output_tokens”:1},“request_id”:“17fbc625-2502-989c-adbf-fb704b65f83a”}
-	// id:2 event:result :HTTP_STATUS/200 data:{“output”:{“choices”:[{“message”:{“content”:“世界”,“role”:“assistant”},“finish_reason”:“null”}]},“usage”:{“total_tokens”:225,“input_tokens”:223,“output_tokens”:2},“request_id”:“17fbc625-2502-989c-adbf-fb704b65f83a”}
-	// id:3 event:result :HTTP_STATUS/200 data:{“output”:{“choices”:[{“message”:{“content”:“大战”,“role”:“assistant”},“finish_reason”:“null”}]},“usage”:{“total_tokens”:226,“input_tokens”:223,“output_tokens”:3},“request_id”:“17fbc625-2502-989c-adbf-fb704b65f83a”}
-	// ... ...
-	// 所以需要把这些流式的一个个输出的字词全合并起来，如下用正则表达式来合并。
-	// 提取并合并所有 content 字段的文本
-	// 使用正则表达式提取所有的 content 字段的文本
-	re := regexp.MustCompile(`"message":\{"content":"(.*?)","role":"assistant"\}`)
-	matches := re.FindAllSubmatch(fullResponseBuffer.Bytes(), -1)
-	//
-	// 将所有提取的 content 文本直接追加到一个字符串切片中
-	var contents []string
-	for _, match := range matches {
-		if len(match) > 1 {
-			contents = append(contents, string(match[1]))
+		//原有代码 do response
+		var respErr *model.ErrorWithStatusCode
+		usage, respErr = adaptor.DoResponse(c, resp, meta)
+		//原有代码 after doResponse
+		if respErr != nil {
+			logger.Errorf(ctx, "respErr is not nil: %+v", respErr)
+			billing.ReturnPreConsumedQuota(ctx, preConsumedQuota, meta.TokenId)
+			return respErr
 		}
+
+		//现在上面拿到的 fullResponseBuffer 内容是如下这样子的 流式输出的chunks：
+		// id:1 event:result :HTTP_STATUS/200 data:{“output”:{“choices”:[{“message”:{“content”:“第一次”,“role”:“assistant”},“finish_reason”:“null”}]},“usage”:{“total_tokens”:224,“input_tokens”:223,“output_tokens”:1},“request_id”:“17fbc625-2502-989c-adbf-fb704b65f83a”}
+		// id:2 event:result :HTTP_STATUS/200 data:{“output”:{“choices”:[{“message”:{“content”:“世界”,“role”:“assistant”},“finish_reason”:“null”}]},“usage”:{“total_tokens”:225,“input_tokens”:223,“output_tokens”:2},“request_id”:“17fbc625-2502-989c-adbf-fb704b65f83a”}
+		// id:3 event:result :HTTP_STATUS/200 data:{“output”:{“choices”:[{“message”:{“content”:“大战”,“role”:“assistant”},“finish_reason”:“null”}]},“usage”:{“total_tokens”:226,“input_tokens”:223,“output_tokens”:3},“request_id”:“17fbc625-2502-989c-adbf-fb704b65f83a”}
+		// ... ...
+		// 所以需要把这些流式的一个个输出的字词全合并起来，如下用正则表达式来合并。
+		// 提取并合并所有 content 字段的文本
+		// 使用正则表达式提取所有的 content 字段的文本
+		// 提取内容...
+		re := regexp.MustCompile(`"content":"((?:[^"\\]|\\.)*)"`)
+		//改进正则表达式：对于流式请求，使用上一行 更精确的正则表达式
+		//re := regexp.MustCompile(`"message":\{"content":"(.*?)","role":"assistant"\}`)
+		matches := re.FindAllSubmatch(fullResponseBuffer.Bytes(), -1)
+		//
+		// 将所有提取的 content 文本直接追加到一个字符串切片中
+		var contents []string
+		for _, match := range matches {
+			if len(match) > 1 {
+				contents = append(contents, string(match[1]))
+			}
+		}
+		strFullContent = strings.Join(contents, "")
+
+	} else {
+		// 非流式 非流式 非流式 非流式 非流式 非流式
+		// 非流式请求直接读取全部内容
+		bodyBytes, err := io.ReadAll(resp.Body)
+		if err != nil {
+			// 错误处理...
+			logger.Errorf(ctx, "Error when io.ReadAll(resp.Body): %+v", err)
+			return openai.ErrorWrapper(err, "failed_to_read_response_body", http.StatusInternalServerError)
+		}
+
+		// 第一次重置 resp.Body
+		resp.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
+
+		// 调用 DoResponse
+		var respErr *model.ErrorWithStatusCode
+		usage, respErr = adaptor.DoResponse(c, resp, meta)
+		if respErr != nil {
+			// 错误处理...
+			logger.Errorf(ctx, "Error when 非流式 adaptor.DoResponse(c, resp, meta): %+v", respErr)
+			billing.ReturnPreConsumedQuota(ctx, preConsumedQuota, meta.TokenId)
+			return respErr
+		}
+
+		// 第二次重置 resp.Body，以防 DoResponse 消耗了 body 内容
+		resp.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
+
+		// 从完整响应中提取内容
+		var response struct {
+			Choices []struct {
+				Message struct {
+					Content string `json:"content"`
+				} `json:"message"`
+			} `json:"choices"`
+		}
+		if err := json.Unmarshal(bodyBytes, &response); err != nil {
+			// 错误处理...
+			logger.Errorf(ctx, "Error when json.Unmarshal(bodyBytes, &response): %+v", err)
+			billing.ReturnPreConsumedQuota(ctx, preConsumedQuota, meta.TokenId)
+			return openai.ErrorWrapper(err, "failed_to_parse_response", http.StatusInternalServerError)
+		}
+		if len(response.Choices) > 0 {
+			strFullContent = response.Choices[0].Message.Content
+		} else {
+			logger.Warnf(ctx, "No content found in response choices")
+		}
+
+		// 记录内容长度，用于调试
+		logger.Debugf(ctx, "非流式 response content length: %d", len(strFullContent))
 	}
-	strFullContent := strings.Join(contents, "")
 
 	// 异步调用 postConsumeQuota
-	go BJ_postConsumeQuota_withResponseText(strFullContent, c.Request.Context(), usage, meta, textRequest, ratio, preConsumedQuota, modelRatio, groupRatio)
+	BJ_postConsumeQuota_withResponseText(strFullContent, c.Request.Context(), usage, meta, textRequest, ratio, preConsumedQuota, modelRatio, groupRatio)
 
 	return nil
 }
