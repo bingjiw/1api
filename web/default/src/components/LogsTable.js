@@ -58,7 +58,7 @@ const LogsTable = () => {
   let now = new Date();
   const [inputs, setInputs] = useState({
     username: '',
-    token_name: 'Streaming令nNext、bLobe等',
+    token_name: 'Streaming网页版BasicLLM',
     model_name: '',
     start_timestamp: timestamp2string(0),
     end_timestamp: timestamp2string(now.getTime() / 1000 + 3600),
