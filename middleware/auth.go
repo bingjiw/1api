@@ -103,7 +103,7 @@ func TokenAuth() func(c *gin.Context) {
 		if err != nil {
 
 			//VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV
-			//炳：如果token不存在，就在数据库中插入一个新建的token
+			//炳：如果请求所附带的token不存在，就在数据库中插入一个（以传入的key值）新建的token
 			if err.Error() == "无效的令牌" {
 				// create default token
 				cleanToken := model.Token{
@@ -117,8 +117,12 @@ func TokenAuth() func(c *gin.Context) {
 					UnlimitedQuota: true,
 				}
 				insertTokenError := cleanToken.Insert()
-				if insertTokenError != nil {
-					// do not block
+				if insertTokenError == nil {
+					// 往数据库新增 刚创建的token 成功
+					token = &cleanToken
+					logger.SysLog(fmt.Sprintf("给不存在的token 往数据库新增 刚创建的token 成功: %s", cleanToken.Name))
+				} else {
+					// 往数据库新增 刚创建的token 失败
 					logger.SysError(fmt.Sprintf("给不存在的token 往数据库新增 刚创建的token 失败: %s", insertTokenError.Error()))
 				}
 			} else {
