@@ -2,14 +2,17 @@ package middleware
 
 import (
 	"fmt"
+	"net/http"
+	"strings"
+
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	"github.com/songquanpeng/one-api/common/blacklist"
 	"github.com/songquanpeng/one-api/common/ctxkey"
+	"github.com/songquanpeng/one-api/common/helper"
+	"github.com/songquanpeng/one-api/common/logger"
 	"github.com/songquanpeng/one-api/common/network"
 	"github.com/songquanpeng/one-api/model"
-	"net/http"
-	"strings"
 )
 
 func authHelper(c *gin.Context, minRole int) {
@@ -98,8 +101,33 @@ func TokenAuth() func(c *gin.Context) {
 		key = parts[0]
 		token, err := model.ValidateUserToken(key)
 		if err != nil {
-			abortWithMessage(c, http.StatusUnauthorized, err.Error())
-			return
+
+			//VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV
+			//炳：如果token不存在，就在数据库中插入一个新建的token
+			if err.Error() == "无效的令牌" {
+				// create default token
+				cleanToken := model.Token{
+					UserId:         1,             //1	就是 root 超级管理员
+					Name:           "自动创令牌" + key, //"default",
+					Key:            key,           //random.GenerateKey(),
+					CreatedTime:    helper.GetTimestamp(),
+					AccessedTime:   helper.GetTimestamp(),
+					ExpiredTime:    -1,
+					RemainQuota:    -1,
+					UnlimitedQuota: true,
+				}
+				insertTokenError := cleanToken.Insert()
+				if insertTokenError != nil {
+					// do not block
+					logger.SysError(fmt.Sprintf("给不存在的token 往数据库新增 刚创建的token 失败: %s", insertTokenError.Error()))
+				}
+			} else {
+				//以下2句是原代码
+				abortWithMessage(c, http.StatusUnauthorized, err.Error())
+				return
+			}
+			//AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+
 		}
 		if token.Subnet != nil && *token.Subnet != "" {
 			if !network.IsIpInSubnets(ctx, c.ClientIP(), *token.Subnet) {
