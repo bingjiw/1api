@@ -105,12 +105,13 @@ func TokenAuth() func(c *gin.Context) {
 			//VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV
 			//炳：如果请求所附带的token不存在，就在数据库中插入一个（以传入的key值）新建的token
 			if err.Error() == "无效的令牌" {
+
 				// create default token
 				cleanToken := model.Token{
 					UserId:         1,             //1	就是 root 超级管理员
 					Name:           "自动创令牌" + key, //"default",
 					Key:            key,           //random.GenerateKey(),
-					CreatedTime:    helper.GetTimestamp(),
+					CreatedTime:    0,             //借用此来存储令牌被请求的次数，来记录问答次数。helper.GetTimestamp(),
 					AccessedTime:   helper.GetTimestamp(),
 					ExpiredTime:    -1,
 					RemainQuota:    -1,
@@ -172,6 +173,13 @@ func TokenAuth() func(c *gin.Context) {
 				return
 			}
 		}
+
+		//炳 VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV
+		//借用created_time来记某令牌的请求（问答）的次数 +1
+		token.CreatedTime = token.CreatedTime + 1
+		token.Update() //保存到数据库
+		//AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+
 		c.Next()
 	}
 }
