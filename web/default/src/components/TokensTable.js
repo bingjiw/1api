@@ -306,7 +306,7 @@ const TokensTable = () => {
                 sortToken('created_time');
               }}
             >
-              创建时间
+              问答次数(原创建时间)
             </Table.HeaderCell>
             <Table.HeaderCell
               style={{ cursor: 'pointer' }}
@@ -334,7 +334,7 @@ const TokensTable = () => {
                   <Table.Cell>{renderStatus(token.status)}</Table.Cell>
                   <Table.Cell>{renderQuota(token.used_quota)}</Table.Cell>
                   <Table.Cell>{token.unlimited_quota ? '无限制' : renderQuota(token.remain_quota, 2)}</Table.Cell>
-                  <Table.Cell>{renderTimestamp(token.created_time)}</Table.Cell>
+                  <Table.Cell>{token.created_time}</Table.Cell>
                   <Table.Cell>{token.expired_time === -1 ? '永不过期' : renderTimestamp(token.expired_time)}</Table.Cell>
                   <Table.Cell>
                     <div>
